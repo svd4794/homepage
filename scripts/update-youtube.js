@@ -1,30 +1,51 @@
-const Parser = require('rss-parser');
+const axios = require('axios');
 const fs = require('fs');
-
-const parser = new Parser();
+const { XMLParser } = require('fast-xml-parser');
 
 async function run() {
 
-  const feed = await parser.parseURL(
-    'https://www.youtube.com/feeds/videos.xml?channel_id=UCoUmBpvYQTj7g1tZUOYbMkQ'
-  );
+  const rssUrl =
+    'https://www.youtube.com/feeds/videos.xml?channel_id=UCoUmBpvYQTj7g1tZUOYbMkQ';
 
-  const latest = feed.items[0];
+  const response =
+    await axios.get(rssUrl);
+
+  const parser =
+    new XMLParser({
+      ignoreAttributes: false
+    });
+
+  const data =
+    parser.parse(response.data);
+
+  const latest =
+    data.feed.entry[0];
 
   const videoId =
-    latest.link.match(/v=([^&]+)/)[1];
+    latest['yt:videoId'];
 
   const result = {
-    title: latest.title,
-    url: latest.link,
-    published: latest.pubDate,
-    videoId: videoId
+
+    title:
+      latest.title,
+
+    videoId:
+      videoId,
+
+    thumbnail:
+      `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+
+    url:
+      `https://www.youtube.com/watch?v=${videoId}`
+
   };
 
   fs.writeFileSync(
     'latest-video.json',
     JSON.stringify(result, null, 2)
   );
+
+  console.log('updated');
 }
 
 run();
